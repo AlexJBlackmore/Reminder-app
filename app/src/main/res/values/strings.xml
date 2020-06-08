@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Stand up now</string>
+
+    <string-array name="repeat_interval_array">
+        <item>1 minute</item>
+        <item>15 minutes</item>
+        <item>30 minutes</item>
+        <item>60 minutes</item>
+    </string-array>
+</resources>
