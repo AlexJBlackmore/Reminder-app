@@ -21,7 +21,6 @@ public class AlarmReceiver extends BroadcastReceiver {
         Intent myIntent = new Intent(context, MainActivity.class);
         PendingIntent myPI = PendingIntent.getActivity(context, NOTIF_ID, myIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-
         NotificationCompat.Builder notifBuilder = new NotificationCompat.Builder(context, CHANNELTHING);
 
         notifBuilder
@@ -38,13 +37,9 @@ public class AlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-
         title = intent.getStringExtra(Intent.EXTRA_TITLE);
         text = intent.getStringExtra(Intent.EXTRA_TEXT);
-        System.out.println("**********************BLARGONNNN**********************************");
-        System.out.println(title + text);
         notifMgr = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         deliverNotif(context);
-
     }
 }

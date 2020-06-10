@@ -1,5 +1,10 @@
 <resources>
-    <string name="app_name">Stand up now</string>
+    <string name="app_name">Custom reminder maker</string>
+    <string name="enter_reminder_name">Enter reminder name</string>
+    <string name="enter_reminder_message">Enter reminder message</string>
+    <string name="set">Set</string>
+    <string name="cancel">Cancel</string>
+    <string name="remind_me_in">Remind me in:</string>
 
     <string-array name="repeat_interval_array">
         <item>1 minute</item>

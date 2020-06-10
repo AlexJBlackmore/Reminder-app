@@ -4,6 +4,7 @@ import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
@@ -38,7 +39,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     long selectedIntervalLong;
     PendingIntent notifyPI;
     AlertDialog.Builder myAlertBuilder;
-
+    AlarmManager alarmManager;
+    Intent notifyIntent;
+    boolean alarmIsRunning;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +53,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         repeatIntervalSpinner = findViewById(R.id.repeatIntervalSpinner);
         setNotification1Btn = findViewById(R.id.setButton);
         stopNotification1Btn = findViewById(R.id.stopButton);
+        stopNotification1Btn.setEnabled(false);
 
         ArrayAdapter<CharSequence> myAdapter = ArrayAdapter.createFromResource(this, R.array.repeat_interval_array, android.R.layout.simple_spinner_item);
         myAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -61,38 +65,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             repeatIntervalSpinner.setOnItemSelectedListener(this);
         }
 
-        final AlarmManager alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
+        alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 
         setListener = new Button.OnClickListener() {
 
             @Override
             public void onClick(View v) {
-                Intent notifyIntent = new Intent(v.getContext(), AlarmReceiver.class);
-                notifyIntent.putExtra(Intent.EXTRA_TITLE, notifTitleET.getText().toString());
-                notifyIntent.putExtra(Intent.EXTRA_TEXT, notifTextET.getText().toString());
-
-                notifyPI = PendingIntent.getBroadcast(v.getContext(), NOTIF_ID, notifyIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-                switch (selectedIntervalStr) {
-                    case "1 minute":
-                        selectedIntervalLong = 1000;
-                        break;
-                    case "15 minutes":
-                        selectedIntervalLong = 4 * 60 * 1000;
-                        break;
-                    case "30 minutes":
-                        selectedIntervalLong = 30 * 60 * 1000;
-                        break;
-                    case "60 minutes":
-                        selectedIntervalLong = 60 * 60 * 1000;
-                        break;
-                    default:
-                        selectedIntervalLong = 60 * 60 * 1000;
-                        Toast.makeText(MainActivity.this, "default clause reached", Toast.LENGTH_SHORT).show();
-                }
-
-                alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, (SystemClock.elapsedRealtime() + selectedIntervalLong), selectedIntervalLong, notifyPI);
-                Toast.makeText(MainActivity.this, "started", Toast.LENGTH_SHORT).show();
+                setNotification();
             }
         };
 
@@ -101,7 +80,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             public void onClick(View v) {
                 notifMgr.cancelAll();
                 alarmManager.cancel(notifyPI);
-                Toast.makeText(MainActivity.this, "stopped", Toast.LENGTH_SHORT).show();
+                alarmIsRunning = false;
+                generateStopDialog();
             }
         };
 
@@ -110,10 +90,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         createNotifChnl();
     }
-
-
-
-
 
     void createNotifChnl() {
         notifMgr = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
@@ -128,7 +104,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         selectedIntervalStr = parent.getItemAtPosition(position).toString();
-        Toast.makeText(this, selectedIntervalStr , Toast.LENGTH_SHORT).show();
     }
 
     @Override
@@ -136,7 +111,102 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
     }
 
-    public String passTitleToAlarm () {
-        return notifTitleET.getText().toString();
+    public void generateConfirmationDialog() {
+        myAlertBuilder = new AlertDialog.Builder(MainActivity.this);
+        myAlertBuilder.setTitle("Reminder created");
+        myAlertBuilder.setMessage(
+                "You will be reminded of the following:"
+                + System.getProperty ("line.separator")
+                + System.getProperty ("line.separator")
+                + notifTitleET.getText().toString()
+                + System.getProperty ("line.separator")
+                + notifTextET.getText().toString()
+                + System.getProperty ("line.separator")
+                + System.getProperty ("line.separator")
+                + "in " + selectedIntervalStr + ".");
+        myAlertBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //
+            }
+        });
+        myAlertBuilder.setNegativeButton("Cancel reminder", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                notifMgr.cancelAll();
+                alarmManager.cancel(notifyPI);
+                alarmIsRunning = false;
+                toggleActiveOrInactive();
+                Toast.makeText(MainActivity.this, "Reminder cancelled.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        myAlertBuilder.show();
+    }
+
+    public void generateStopDialog() {
+        myAlertBuilder = new AlertDialog.Builder(MainActivity.this);
+        myAlertBuilder.setTitle("Reminder stopped");
+        myAlertBuilder.setMessage(
+                "You have stopped the following reminder:"
+                        + System.getProperty ("line.separator")
+                        + System.getProperty ("line.separator")
+                        + notifTitleET.getText().toString()
+                        + System.getProperty ("line.separator")
+                        + notifTextET.getText().toString()
+                        + System.getProperty ("line.separator")
+                        + System.getProperty ("line.separator"));
+        myAlertBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                toggleActiveOrInactive();
+            }
+        });
+        myAlertBuilder.show();
+    }
+
+    public void setNotification() {
+        notifyIntent = new Intent(this, AlarmReceiver.class);
+        notifyIntent.putExtra(Intent.EXTRA_TITLE, notifTitleET.getText().toString());
+        notifyIntent.putExtra(Intent.EXTRA_TEXT, notifTextET.getText().toString());
+
+        notifyPI = PendingIntent.getBroadcast(this, NOTIF_ID, notifyIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        switch (selectedIntervalStr) {
+            case "1 minute":
+                selectedIntervalLong = 1000;
+                break;
+            case "15 minutes":
+                selectedIntervalLong = 4 * 60 * 1000;
+                break;
+            case "30 minutes":
+                selectedIntervalLong = 30 * 60 * 1000;
+                break;
+            case "60 minutes":
+                selectedIntervalLong = 60 * 60 * 1000;
+                break;
+            default:
+                selectedIntervalLong = 60 * 60 * 1000;
+        }
+
+        alarmManager.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, (SystemClock.elapsedRealtime() + selectedIntervalLong), notifyPI);
+        alarmIsRunning = true;
+        generateConfirmationDialog();
+        toggleActiveOrInactive();
+    }
+
+    public void toggleActiveOrInactive () {
+        if (alarmIsRunning) {
+            notifTitleET.setEnabled(false);
+            notifTextET.setEnabled(false);
+            repeatIntervalSpinner.setEnabled(false);
+            setNotification1Btn.setEnabled(false);
+            stopNotification1Btn.setEnabled(true);
+        } else {
+            notifTitleET.setEnabled(true);
+            notifTextET.setEnabled(true);
+            repeatIntervalSpinner.setEnabled(true);
+            setNotification1Btn.setEnabled(true);
+            stopNotification1Btn.setEnabled(false);
+        }
     }
 }
